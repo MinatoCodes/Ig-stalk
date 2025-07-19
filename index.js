@@ -10,7 +10,7 @@ async function scrapeInstagramProfile(username) {
     form.append('profile', username);
 
     // Make POST request
-    const response = await axios.post(`${BASE_URL}/instagram/profile-info`, form, {
+    const res = await axios.post(`${BASE_URL}/instagram/profile-info`, form, {
       headers: {
         ...form.getHeaders(),
         'authority': 'tools.xrespond.com',
@@ -32,20 +32,26 @@ async function scrapeInstagramProfile(username) {
       }
     });
 
-    const data = response.data.data;
+    // Define matching variable with full response data
+    const matching = res.data;
 
-    // Parse required fields
+    console.log('🔎 Full API response:', JSON.stringify(matching, null, 2));
+
+    // Extract main data block
+    const data = matching.data;
+
+    // Parse required fields using matching
     const result = {
       username: username,
-      uid: data['fbid_v2'] || null,
-      biography: data['biography'] || null,
-      followers: data['follower_count'] || 0,
-      following: data['following_count'] || 0,
-      posts: data['media_count'] || 0,
-      profilePicHD: data['hd_profile_pic_url_info']?.url || null
+      uid: data?.fbid_v2 || null,
+      biography: data?.biography || null,
+      followers: data?.follower_count || 0,
+      following: data?.following_count || 0,
+      posts: data?.media_count || 0,
+      profilePicHD: data?.hd_profile_pic_url_info?.url || null
     };
 
-    console.log('✅ Scraped Profile:');
+    console.log('✅ Scraped Profile Result:');
     console.log(result);
 
   } catch (error) {
@@ -55,3 +61,4 @@ async function scrapeInstagramProfile(username) {
 
 // Example test username
 scrapeInstagramProfile('hey___minato');
+      
