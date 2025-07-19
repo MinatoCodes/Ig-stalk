@@ -1,31 +1,18 @@
-const express = require('express');
 const axios = require('axios');
 const FormData = require('form-data');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.get('/api/igstalk', async (req, res) => {
-  const { username } = req.query;
-
-  if (!username) {
-    return res.status(400).json({
-      success: false,
-      message: "Username is required"
-    });
-  }
-
+async function scrapeInstagramProfile(username) {
   try {
     const BASE_URL = 'https://tools.xrespond.com/api';
 
-    // Build multipart/form-data payload
-    const joinPayload = new FormData();
-    joinPayload.append('profile', username);
+    // Build payload
+    const form = new FormData();
+    form.append('profile', username);
 
-    // Make POST request in your desired format
-    const response = await axios.post(`${BASE_URL}/instagram/profile-info`, joinPayload, {
+    // Make POST request
+    const response = await axios.post(`${BASE_URL}/instagram/profile-info`, form, {
       headers: {
-        ...joinPayload.getHeaders(),
+        ...form.getHeaders(),
         'authority': 'tools.xrespond.com',
         'method': 'POST',
         'path': '/api/instagram/profile-info',
@@ -47,7 +34,7 @@ app.get('/api/igstalk', async (req, res) => {
 
     const data = response.data.data;
 
-    // Parse required fields for your API response
+    // Parse required fields
     const result = {
       username: username,
       uid: data['fbid_v2'] || null,
@@ -58,22 +45,13 @@ app.get('/api/igstalk', async (req, res) => {
       profilePicHD: data['hd_profile_pic_url_info']?.url || null
     };
 
-    res.json({
-      success: true,
-      data: result
-    });
+    console.log('✅ Scraped Profile:');
+    console.log(result);
 
   } catch (error) {
-    console.error(error.response?.data || error.message);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch Instagram profile info",
-      error: error.response?.data || error.message
-    });
+    console.error('❌ Error scraping profile:', error.response?.data || error.message);
   }
-});
+}
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
-        
+// Example test username
+scrapeInstagramProfile('hey___minato');
