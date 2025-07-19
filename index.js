@@ -37,21 +37,37 @@ async function scrapeInstagramProfile(username) {
 
     console.log('🔎 Full API response:', JSON.stringify(matching, null, 2));
 
-    // Extract main data block
-    const data = matching.data;
-
-    // Parse required fields using matching
-    const result = {
+    // Robustly find data keys without direct .data access
+    let result = {
       username: username,
-      uid: data?.fbid_v2 || null,
-      biography: data?.biography || null,
-      followers: data?.follower_count || 0,
-      following: data?.following_count || 0,
-      posts: data?.media_count || 0,
-      profilePicHD: data?.hd_profile_pic_url_info?.url || null
+      uid: null,
+      biography: null,
+      followers: 0,
+      following: 0,
+      posts: 0,
+      profilePicHD: null
     };
 
-    console.log('✅ Scraped Profile Result:');
+    // Search entire matching object recursively
+    function findKey(obj, key) {
+      if (typeof obj !== 'object' || obj === null) return undefined;
+      if (obj.hasOwnProperty(key)) return obj[key];
+      for (let k in obj) {
+        const found = findKey(obj[k], key);
+        if (found !== undefined) return found;
+      }
+      return undefined;
+    }
+
+    // Populate result using findKey function
+    result.uid = findKey(matching, 'fbid_v2') || null;
+    result.biography = findKey(matching, 'biography') || null;
+    result.followers = findKey(matching, 'follower_count') || 0;
+    result.following = findKey(matching, 'following_count') || 0;
+    result.posts = findKey(matching, 'media_count') || 0;
+    result.profilePicHD = findKey(matching, 'hd_profile_pic_url_info')?.url || null;
+
+    console.log('✅ Final Scraped Result:');
     console.log(result);
 
   } catch (error) {
@@ -61,4 +77,4 @@ async function scrapeInstagramProfile(username) {
 
 // Example test username
 scrapeInstagramProfile('hey___minato');
-      
+          
