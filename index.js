@@ -1,7 +1,20 @@
+const express = require('express');
 const axios = require('axios');
 const FormData = require('form-data');
 
-async function scrapeInstagramProfile(username) {
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/api/igstalk', async (req, res) => {
+  const { username } = req.query;
+
+  if (!username) {
+    return res.status(400).json({
+      success: false,
+      message: "Username is required"
+    });
+  }
+
   try {
     const BASE_URL = 'https://tools.xrespond.com/api';
 
@@ -10,7 +23,7 @@ async function scrapeInstagramProfile(username) {
     form.append('profile', username);
 
     // Make POST request
-    const res = await axios.post(`${BASE_URL}/instagram/profile-info`, form, {
+    const apiRes = await axios.post(`${BASE_URL}/instagram/profile-info`, form, {
       headers: {
         ...form.getHeaders(),
         'authority': 'tools.xrespond.com',
@@ -32,23 +45,10 @@ async function scrapeInstagramProfile(username) {
       }
     });
 
-    // Define matching variable with full response data
-    const matching = res.data;
+    // Full API response stored in matching variable
+    const matching = apiRes.data;
 
-    console.log('🔎 Full API response:', JSON.stringify(matching, null, 2));
-
-    // Robustly find data keys without direct .data access
-    let result = {
-      username: username,
-      uid: null,
-      biography: null,
-      followers: 0,
-      following: 0,
-      posts: 0,
-      profilePicHD: null
-    };
-
-    // Search entire matching object recursively
+    // Robust findKey function
     function findKey(obj, key) {
       if (typeof obj !== 'object' || obj === null) return undefined;
       if (obj.hasOwnProperty(key)) return obj[key];
@@ -59,22 +59,33 @@ async function scrapeInstagramProfile(username) {
       return undefined;
     }
 
-    // Populate result using findKey function
-    result.uid = findKey(matching, 'fbid_v2') || null;
-    result.biography = findKey(matching, 'biography') || null;
-    result.followers = findKey(matching, 'follower_count') || 0;
-    result.following = findKey(matching, 'following_count') || 0;
-    result.posts = findKey(matching, 'media_count') || 0;
-    result.profilePicHD = findKey(matching, 'hd_profile_pic_url_info')?.url || null;
+    // Prepare final result
+    const result = {
+      username: username,
+      uid: findKey(matching, 'fbid_v2') || null,
+      biography: findKey(matching, 'biography') || null,
+      followers: findKey(matching, 'follower_count') || 0,
+      following: findKey(matching, 'following_count') || 0,
+      posts: findKey(matching, 'media_count') || 0,
+      profilePicHD: findKey(matching, 'hd_profile_pic_url_info')?.url || null
+    };
 
-    console.log('✅ Final Scraped Result:');
-    console.log(result);
+    res.json({
+      success: true,
+      data: result
+    });
 
   } catch (error) {
-    console.error('❌ Error scraping profile:', error.response?.data || error.message);
+    console.error('❌ API error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch Instagram profile info",
+      error: error.response?.data || error.message
+    });
   }
-}
+});
 
-// Example test username
-scrapeInstagramProfile('hey___minato');
-          
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
+        
